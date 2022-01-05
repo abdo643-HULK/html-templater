@@ -1,0 +1,1 @@
+{"version":3,"file":"pwa.config.js","sourceRoot":"","sources":["../../config/pwa.config.ts"],"names":[],"mappings":"AAGA,MAAM,MAAM,GAAG;IACd,OAAO,EAAE,MAAM;IACf,QAAQ,EAAE,UAAU;IACpB,UAAU,EAAE;QACX,mBAAmB,EAAE,CAAC,sFAAsF,CAAC;QAC7G,cAAc,EAAE;YACf,2BAA2B;YAC3B,8BAA8B;YAC9B,kCAAkC;SAClC;KACD;CACY,CAAC;AAGf,eAAe,MAAM,CAAC"}
