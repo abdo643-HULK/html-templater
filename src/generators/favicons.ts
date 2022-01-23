@@ -17,7 +17,11 @@ const DEFAULT_SIZES = [16, 32, 96, 192] as const;
 // Viewbox must set to 16 x 16 → viewBox=“0 0 16 16”
 // <link rel="mask-icon" href="/assets/favicons/safari-pinned-tab.svg" color="#5bbad5">
 
-export async function generateFavicons(icon: Sharp, options: FaviconGeneratorOptions = {}) {
+export async function generateFavicons(
+	icon: Sharp,
+	options: FaviconGeneratorOptions = {},
+	cb: Function = () => {}
+) {
 	console.group('Favicons');
 	const { outDir = DEFAULT_FAVICONS_PATH } = options;
 	const outDirPath = getPath(outDir);
@@ -51,4 +55,6 @@ export async function generateFavicons(icon: Sharp, options: FaviconGeneratorOpt
 	console.log('Finished Favicons');
 
 	console.groupEnd();
+
+	cb();
 }

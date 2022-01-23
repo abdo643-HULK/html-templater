@@ -7,7 +7,10 @@ import type { OutputInfo, Sharp } from 'sharp';
 
 const DEFAULT_SIZES = [128, 144, 152, 192, 256, 512] as const;
 
-export async function generateManifest({ manifestOutPath = DEFAULT_MANIFEST_PATH, ...restConfig }: ManifestConfig) {
+export async function generateManifest(
+	{ manifestOutPath = DEFAULT_MANIFEST_PATH, ...restConfig }: ManifestConfig,
+	cb: Function = () => {}
+) {
 	console.group('Manifest');
 	console.log('Writing to filesystem path:', getPath(manifestOutPath));
 
@@ -16,13 +19,15 @@ export async function generateManifest({ manifestOutPath = DEFAULT_MANIFEST_PATH
 
 	console.log('Finished generating File');
 	console.groupEnd();
+
+	cb();
 }
 
 async function render({
 	iconsOutDir = 'static/icons/manifest',
 	icon: iconImage,
 	padding,
-	manifest,
+	manifest
 }: Omit<ManifestConfig, 'manifestOutPath'>) {
 	console.log('Generating Icons Directory');
 
@@ -47,7 +52,7 @@ async function render({
 				bottom: paddingSize,
 				left: paddingSize,
 				right: paddingSize,
-				background: { r: 0, g: 0, b: 0, alpha: 0 },
+				background: { r: 0, g: 0, b: 0, alpha: 0 }
 			});
 
 			resizeImagePromises.push(newImg.toFile(path));
@@ -56,7 +61,7 @@ async function render({
 				src: path,
 				sizes: `${size}x${size}`,
 				type: 'image/png',
-				purpose: 'maskable',
+				purpose: 'maskable'
 			} as ImageResource;
 		});
 	}
@@ -103,7 +108,7 @@ function createManifestInfo(config: ManifestOptions) {
 		related_applications: config.related_applications,
 		gcm_sender_id: '103953800507',
 		gcm_user_visible_only: true,
-		capture_links: 'none',
+		capture_links: 'none'
 	} as const;
 
 	return manifest;

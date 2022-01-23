@@ -1,24 +1,25 @@
+#!/usr/bin/env node
+
 import sharp from 'sharp';
-import { dirname } from 'path';
-import { fileURLToPath } from 'url';
 import { writeFileSync, readFileSync, existsSync, mkdirSync } from 'fs';
 
-import { getPath, getAppHtmlConfigFile, getSiteMapConfigFile } from './src/util/helper.js';
+import { getPath, getAppHtmlConfigFile, getSiteMapConfigFile } from './util/helper.js';
 import {
 	generateBrowserconfig,
 	generateManifest,
 	generateSitemap,
 	generateAppleImages,
-	generateFavicons,
-} from './src/generators/index.js';
+	generateFavicons
+} from './generators/index.js';
 import {
 	DEFAULT_BROWSERCONFIG_PATH,
 	DEFAULT_MANIFEST_PATH,
 	DEFAULT_APPLE_SPLASH_PATH,
 	DEFAULT_FAVICONS_PATH,
 	DEFAULT_SITEMAP_PATH,
-	DEFAULTS,
-} from './src/util/consts.js';
+	DEFAULTS
+} from './util/consts.js';
+import { PWAConfig, VALID_RENDERER } from './config/config.js';
 
 // import os from 'os';
 // import WorkerPool from './src/util/worker-pool.js';
@@ -33,66 +34,19 @@ async function main() {
 	const appHtmlConfig = await getAppHtmlConfigFile('src/config');
 	// console.log('PWAConfig:', appHtmlConfig);
 
-	if (!appHtmlConfig.appName) {
-		throw new Error('missing appName in PWA Config');
+	if (!appHtmlConfig.render) {
+		throw new Error(
+			'Renderer property missing in Config. Valid renderers are: ' + VALID_RENDERER.join(',')
+		);
 	}
 
 	if (!appHtmlConfig.iconPath) {
 		throw new Error('missing iconPath in PWA Config');
 	}
 
-	const padding = appHtmlConfig.padding || DEFAULTS.padding;
-	const iconBuffer = readFileSync(appHtmlConfig.iconPath);
-
-	// PWA Manifest
-	const pwaManifestConfig = appHtmlConfig.pwaManifest;
-	const pwaManifestIconBuffer = pwaManifestConfig?.iconPath
-		? readFileSync(getPath(pwaManifestConfig?.iconPath))
-		: iconBuffer;
-	const manifestPath = pwaManifestConfig?.manifestOutPath || DEFAULT_MANIFEST_PATH;
-
-	await generateManifest({
-		icon: sharp(pwaManifestIconBuffer),
-		iconsOutDir: pwaManifestConfig?.iconsOutDir,
-		padding: padding,
-		manifestOutPath: manifestPath,
-		manifest: {
-			name: appHtmlConfig.appName,
-			themeColor: appHtmlConfig.themeColor,
-			...(pwaManifestConfig?.manifest || {}),
-		},
-	});
-
-	// Apple Images
-	console.time('Apple');
-	const appleConfig = appHtmlConfig.apple;
-	const appleIconBuffer = appleConfig?.iconPath ? readFileSync(getPath(appleConfig?.iconPath)) : iconBuffer;
-	const appleTags = await generateAppleImages(sharp(appleIconBuffer), padding, {
-		themeColor: appHtmlConfig.themeColor,
-		themeColorDark: appHtmlConfig.themeColorDark,
-		// iconsOutPath: appHtmlConfig.apple?.iconsOutPath,
-		splashScreensOutPath: appHtmlConfig.apple?.splashScreensOutPath,
-	});
-	console.timeEnd('Apple');
-
-	// Favicons
-	console.time('Favicons');
-	const faviconConfig = appHtmlConfig.favicon;
-	if (!Array.isArray(faviconConfig)) {
-		const faviconImageBuffer = faviconConfig?.iconPath
-			? readFileSync(getPath(faviconConfig?.iconPath))
-			: iconBuffer;
-		const faviconsTags = await generateFavicons(sharp(faviconImageBuffer));
+	if (appHtmlConfig.pwa) {
+		createPWAProps(appHtmlConfig.pwa);
 	}
-	console.timeEnd('Favicons');
-
-	// // Microsoft Browserconfig
-	// const browserconfig = appHtmlConfig.browserconfig;
-	// if (browserconfig) {
-	// 	console.log('Writing to filesystem path:', getPath(browserconfig.outPath || DEFAULT_BROWSERCONFIG_PATH));
-	// 	generateBrowserconfig(browserconfig);
-	// 	console.log('Finished Browserconfig');
-	// }
 
 	console.log('Writing app.html');
 
@@ -102,8 +56,8 @@ async function main() {
 		headConfig: {
 			pwaName: appHtmlConfig.appName,
 			startUrl: appHtmlConfig.startUrl,
-			...appHtmlConfig.headConfig,
-		},
+			...appHtmlConfig
+		}
 	});
 
 	console.timeEnd('HTML');
@@ -116,6 +70,87 @@ async function main() {
 	// // Sitemap
 	// console.log('Writing to filesystem path:', DEFAULT_SITEMAP_PATH);
 	// generateSitemap(sitemapConfig);
+}
+
+async function createPWAProps(pwaConfig: PWAConfig) {
+	const padding = pwaConfig.padding || DEFAULTS.padding;
+	const iconBuffer = readFileSync(pwaConfig.iconPath);
+
+	// ---------------------------------------
+	// ------------ PWA Manifest -------------
+	// ---------------------------------------
+	const pwaManifestConfig = pwaConfig.pwaManifest;
+	const pwaManifestIconBuffer = pwaManifestConfig?.iconPath
+		? readFileSync(getPath(pwaManifestConfig?.iconPath))
+		: iconBuffer;
+	const manifestPath = pwaManifestConfig?.manifestOutPath || DEFAULT_MANIFEST_PATH;
+
+	const manifestPromise = generateManifest({
+		icon: sharp(pwaManifestIconBuffer),
+		iconsOutDir: pwaManifestConfig?.iconsOutDir,
+		padding: padding,
+		manifestOutPath: manifestPath,
+		manifest: {
+			name: pwaConfig.appName,
+			themeColor: pwaConfig.themeColor,
+			...(pwaManifestConfig?.manifest || {})
+		}
+	});
+
+	// ---------------------------------------
+	// -------------- AppleImages ------------
+	// ---------------------------------------
+	console.time('Apple');
+	const appleConfig = pwaConfig.apple;
+	const appleIconBuffer = appleConfig?.iconPath
+		? readFileSync(getPath(appleConfig?.iconPath))
+		: iconBuffer;
+
+	const appleImagesPromise = generateAppleImages(
+		sharp(appleIconBuffer),
+		padding,
+		{
+			themeColor: pwaConfig.themeColor,
+			themeColorDark: pwaConfig.themeColorDark,
+			// iconsOutPath: pwaConfig.apple?.iconsOutPath,
+			splashScreensOutPath: pwaConfig.apple?.splashScreensOutPath
+		},
+		() => console.timeEnd('Apple')
+	);
+
+	// ---------------------------------------
+	// -------------- Favicons ---------------
+	// ---------------------------------------
+	console.time('Favicons');
+
+	let faviconsPromise: Promise<void>;
+	const faviconConfig = pwaConfig.favicon;
+	if (!Array.isArray(faviconConfig)) {
+		const faviconImageBuffer = faviconConfig?.iconPath
+			? readFileSync(getPath(faviconConfig?.iconPath))
+			: iconBuffer;
+
+		faviconsPromise = generateFavicons(sharp(faviconImageBuffer), undefined, () =>
+			console.timeEnd('Favicons')
+		);
+	} else {
+		faviconsPromise = Promise.resolve();
+		console.timeEnd('Favicons');
+	}
+
+	// ---------------------------------------
+	// ----------- BrowserConfig -------------
+	// ---------------------------------------
+
+	// // Microsoft Browserconfig
+	// const browserconfig = pwaConfig.browserconfig;
+	// if (browserconfig) {
+	// 	console.log('Writing to filesystem path:', getPath(browserconfig.outPath || DEFAULT_BROWSERCONFIG_PATH));
+	// 	generateBrowserconfig(browserconfig);
+	// 	console.log('Finished Browserconfig');
+	// }
+
+	return Promise.all([manifestPromise, appleImagesPromise, faviconsPromise]);
 }
 
 interface HeadOptions {
@@ -157,7 +192,7 @@ function writeHead(options: HeadOptions) {
 		dnsPrefetches = [],
 		externalStyleSheets = [],
 		preConnections = [],
-		transform = (head) => head,
+		transform = (head) => head
 	} = options;
 
 	const isPWA = pwa ? 'yes' : 'no';
@@ -177,7 +212,9 @@ function writeHead(options: HeadOptions) {
 	<head>
 		<meta charset="utf-8" />
 		<meta http-equiv="X-UA-Compatible" content="IE=edge" />
-		<meta name="viewport" content="width=device-width, initial-scale=1.0" ${!shrinkToFit ? 'shrink-to-fit=no ' : ''}/>
+		<meta name="viewport" content="width=device-width, initial-scale=1.0" ${
+			!shrinkToFit ? 'shrink-to-fit=no ' : ''
+		}/>
 		
 		<meta name="application-name" content="${pwaName}" />
 		<meta name="apple-mobile-web-app-title" content="${pwaName}" />

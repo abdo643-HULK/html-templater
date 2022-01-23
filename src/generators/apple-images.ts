@@ -13,17 +13,24 @@ interface AppleImagesConfig {
 	themeColorDark?: Color;
 }
 
-export function generateAppleImages(icon: Sharp, padding: number, config: Partial<AppleImagesConfig>) {
+export async function generateAppleImages(
+	icon: Sharp,
+	padding: number,
+	config: Partial<AppleImagesConfig>,
+	cb: Function = () => {}
+) {
 	console.group('Apple Images');
 
-	const tags = createImages(icon, padding, {
+	const tags = await createImages(icon, padding, {
 		themeColor: config.themeColor || DEFAULTS.themeColor,
 		// iconsOutPath: config.iconsOutPath ||
 		splashScreensOutPath: config.splashScreensOutPath || DEFAULT_APPLE_SPLASH_PATH,
-		themeColorDark: config.themeColorDark,
+		themeColorDark: config.themeColorDark
 	});
 
 	console.groupEnd();
+	cb();
+
 	return tags;
 }
 
@@ -48,7 +55,7 @@ async function createImages(icon: Sharp, padding: number, options: AppleImagesCo
 		'1620x2160': 2,
 		'1668x2224': 2,
 		'1668x2388': 2,
-		'2048x2732': 2,
+		'2048x2732': 2
 	};
 
 	const iphoneResolutions: IphoneScreeenResolutions = {
@@ -57,7 +64,7 @@ async function createImages(icon: Sharp, padding: number, options: AppleImagesCo
 		'1080x1920': 3,
 		'1125x2436': 3,
 		'1170x2532': 3,
-		'1284x2778': 3,
+		'1284x2778': 3
 	};
 
 	const combined = Object.assign({}, iphoneResolutions, ipadResolutions);
@@ -81,7 +88,7 @@ async function createImages(icon: Sharp, padding: number, options: AppleImagesCo
 				padding,
 				image: icon,
 				themeColor: options.themeColor,
-				outPath: options.splashScreensOutPath,
+				outPath: options.splashScreensOutPath
 			});
 		};
 	} else {
@@ -94,7 +101,7 @@ async function createImages(icon: Sharp, padding: number, options: AppleImagesCo
 				image: icon,
 				themeColor: options.themeColor,
 				themeColorDark: options.themeColorDark!,
-				outPath: options.splashScreensOutPath,
+				outPath: options.splashScreensOutPath
 			});
 		};
 	}
@@ -106,13 +113,13 @@ async function createImages(icon: Sharp, padding: number, options: AppleImagesCo
 			const portrait = {
 				size,
 				width: Number(split[0]),
-				height: Number(split[1]),
+				height: Number(split[1])
 			};
 
 			const landscape = {
 				size: `${split[1]}x${split[0]}`,
 				width: Number(split[1]),
-				height: Number(split[0]),
+				height: Number(split[0])
 			};
 
 			const result = generator(portrait, landscape, density);
@@ -155,7 +162,7 @@ function createSplashWithDark(config: CreateSplashWithDarkParams) {
 		background: '#fff',
 		width: portrait.width,
 		height: portrait.height,
-		path: portraitPath,
+		path: portraitPath
 	});
 
 	const portraitDarkPath = `${outPath}/splash-portrait-dark-${portrait.size}.png`;
@@ -166,7 +173,7 @@ function createSplashWithDark(config: CreateSplashWithDarkParams) {
 		background: '#fff',
 		width: portrait.width,
 		height: portrait.height,
-		path: portraitDarkPath,
+		path: portraitDarkPath
 	});
 
 	const landscapePath = `${outPath}/splash-landscape-${landscape.size}.png`;
@@ -177,7 +184,7 @@ function createSplashWithDark(config: CreateSplashWithDarkParams) {
 		background: '#fff',
 		width: landscape.width,
 		height: landscape.height,
-		path: landscapePath,
+		path: landscapePath
 	});
 
 	const landscapeDarkPath = `${outPath}/splash-landscape-dark-${landscape.size}.png`;
@@ -188,7 +195,7 @@ function createSplashWithDark(config: CreateSplashWithDarkParams) {
 		background: '#fff',
 		width: landscape.width,
 		height: landscape.height,
-		path: landscapeDarkPath,
+		path: landscapeDarkPath
 	});
 
 	return {
@@ -196,13 +203,20 @@ function createSplashWithDark(config: CreateSplashWithDarkParams) {
 			portrait: portraitPath,
 			portraitDark: portraitDarkPath,
 			landscape: landscapePath,
-			landscapeDark: landscapeDarkPath,
+			landscapeDark: landscapeDarkPath
 		}),
-		outputinfo: [portrtaitPromise, portraitDarkPromise, landscapePromise, landscapeDarkPromise],
+		outputinfo: [portrtaitPromise, portraitDarkPromise, landscapePromise, landscapeDarkPromise]
 	};
 }
 
-function createSplash({ image, outPath, portrait, landscape, density, padding }: CreateSplashParams) {
+function createSplash({
+	image,
+	outPath,
+	portrait,
+	landscape,
+	density,
+	padding
+}: CreateSplashParams) {
 	const portraitPath = `${outPath}/splash-portrait-${portrait.size}.png`;
 
 	const portrtaitPromise = createPortraitSplashImage({
@@ -211,7 +225,7 @@ function createSplash({ image, outPath, portrait, landscape, density, padding }:
 		background: '#fff',
 		width: portrait.width,
 		height: portrait.height,
-		path: portraitPath,
+		path: portraitPath
 	});
 
 	const landscapePath = `${outPath}/splash-landscape-${landscape.size}.png`;
@@ -222,15 +236,15 @@ function createSplash({ image, outPath, portrait, landscape, density, padding }:
 		background: '#fff',
 		width: landscape.width,
 		height: landscape.height,
-		path: landscapePath,
+		path: landscapePath
 	});
 
 	return {
 		metaTags: createMetaTags(portrait.width, portrait.height, density, {
 			portrait: portraitPath,
-			landscape: landscapePath,
+			landscape: landscapePath
 		}),
-		outputinfo: [portrtaitPromise, landscapePromise],
+		outputinfo: [portrtaitPromise, landscapePromise]
 	};
 }
 
@@ -243,7 +257,14 @@ interface SplashImageProps {
 	path: string;
 }
 
-async function createPortraitSplashImage({ width, height, image, background, path, padding }: SplashImageProps) {
+async function createPortraitSplashImage({
+	width,
+	height,
+	image,
+	background,
+	path,
+	padding
+}: SplashImageProps) {
 	const newImageSize = Math.ceil(width * (1 - padding));
 	const top = Math.floor((height - newImageSize) / 2);
 	const bottom = top;
@@ -258,12 +279,19 @@ async function createPortraitSplashImage({ width, height, image, background, pat
 			bottom,
 			top,
 			left,
-			right,
+			right
 		})
 		.toFile(getPath(path));
 }
 
-async function createLandscapeSplashImage({ width, height, image, background, path, padding }: SplashImageProps) {
+async function createLandscapeSplashImage({
+	width,
+	height,
+	image,
+	background,
+	path,
+	padding
+}: SplashImageProps) {
 	const newImageSize = Math.ceil(height * (1 - padding));
 	const top = Math.floor((height * padding) / 2);
 	const bottom = top;
@@ -278,27 +306,36 @@ async function createLandscapeSplashImage({ width, height, image, background, pa
 			bottom,
 			top,
 			left,
-			right,
+			right
 		})
 		.toFile(getPath(path));
 }
 
 // This one is slower than the 2 above because you have to wait
 // for the image be resized and than converted to a buffer
-async function createSplashImage({ width, height, image, background, path, padding }: SplashImageProps) {
+async function createSplashImage({
+	width,
+	height,
+	image,
+	background,
+	path,
+	padding
+}: SplashImageProps) {
 	return sharp({
 		create: {
 			channels: 4,
 			background: background,
 			width: width,
-			height: height,
-		},
+			height: height
+		}
 	})
 		.composite([
 			{
-				input: await image.resize(Math.ceil(Math.min(width, height) * (1 - padding))).toBuffer(),
-				gravity: 'center',
-			},
+				input: await image
+					.resize(Math.ceil(Math.min(width, height) * (1 - padding)))
+					.toBuffer(),
+				gravity: 'center'
+			}
 		])
 		.toFile(getPath(path));
 }
@@ -315,7 +352,7 @@ function createMetaTags(
 	const { landscape, portrait } = createMediaProperties(width, height, density);
 	return [
 		`<link rel="apple-touch-startup-image" media="${portrait}" href="${href}"/>`,
-		`<link rel="apple-touch-startup-image" media="${landscape}"href="${href}"/>`,
+		`<link rel="apple-touch-startup-image" media="${landscape}"href="${href}"/>`
 	];
 }
 
@@ -326,13 +363,18 @@ interface DarkmodeHref {
 	landscapeDark: string;
 }
 
-function createMetaTagsWithDarkmode(width: number, height: number, density: number, href: DarkmodeHref) {
+function createMetaTagsWithDarkmode(
+	width: number,
+	height: number,
+	density: number,
+	href: DarkmodeHref
+) {
 	const { landscape, portrait } = createMediaProperties(width, height, density);
 	return [
 		`<link rel="apple-touch-startup-image" media="${portrait}" href="${href.portrait}"/>`,
 		`<link rel="apple-touch-startup-image" media="(prefers-color-scheme: dark) and ${portrait}" href="${href.portraitDark}"/>`,
 		`<link rel="apple-touch-startup-image" media="${landscape}"href="${href.landscape}"/>`,
-		`<link rel="apple-touch-startup-image" media="(prefers-color-scheme: dark) and ${landscape}"href="${href.landscapeDark}"/>`,
+		`<link rel="apple-touch-startup-image" media="(prefers-color-scheme: dark) and ${landscape}"href="${href.landscapeDark}"/>`
 	];
 }
 
@@ -346,6 +388,6 @@ function createMediaProperties(width: number, height: number, density: number) {
 
 	return {
 		landscape,
-		portrait,
+		portrait
 	};
 }

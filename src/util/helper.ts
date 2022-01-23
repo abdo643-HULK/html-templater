@@ -1,14 +1,14 @@
-import path, { resolve } from 'path';
+import { resolve } from 'path';
 import { existsSync, readdirSync, readFileSync } from 'fs';
 
-import type { PWAConfig } from '../config/config.js';
+import type { Config } from '../config/config.js';
 
 // const inScripts = process.cwd().includes('scripts') ? path.resolve(process.cwd(), '..') : process.cwd();
 const inScripts = process.cwd();
 
 export function getPath(...pathSegment: string[]): string {
 	// return path.resolve(process.cwd(), ...pathSegment);
-	return path.resolve(inScripts, ...pathSegment);
+	return resolve(inScripts, ...pathSegment);
 }
 
 export async function loadFile<T>(path: string): Promise<T> {
@@ -30,10 +30,12 @@ export async function getAppHtmlConfigFile(otherPath: string = '') {
 	// even slower
 	const configDir = getPath(otherPath);
 	if (existsSync(configDir)) {
-		const match = readdirSync(configDir).find((path) => new RegExp('pwa.config.(cjs|mjs|js|ts)').test(path));
+		const match = readdirSync(configDir).find((path) =>
+			new RegExp('pwa.config.(cjs|mjs|js|ts)').test(path)
+		);
 		if (match) {
 			const path = getPath(otherPath, match);
-			return loadFile<PWAConfig>(path);
+			return loadFile<Config>(path);
 		}
 
 		throw new Error(`pwa.config.(cjs|mjs|js) doesn't exist.`);
@@ -45,7 +47,9 @@ export async function getAppHtmlConfigFile(otherPath: string = '') {
 export async function getSiteMapConfigFile(otherPath: string = '') {
 	const configDir = getPath(otherPath);
 	if (existsSync(configDir)) {
-		const match = readdirSync(configDir).find((path) => new RegExp('kit-sitemap.(cjs|mjs|js)').test(path));
+		const match = readdirSync(configDir).find((path) =>
+			new RegExp('kit-sitemap.(cjs|mjs|js)').test(path)
+		);
 		if (match) {
 			const path = getPath(otherPath, match);
 			return loadFile<SitemapConfig>(path);
@@ -72,6 +76,6 @@ export const stylesheets = (() => {
 		links: stylesheets,
 		push: (stylesheet: string) => {
 			stylesheets.push(stylesheet);
-		},
+		}
 	};
 })();
